@@ -1,0 +1,128 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 投稿データ
+model Tweet {
+  id              String    @id @default(cuid())
+  tweetId         String    @unique @map("tweet_id")
+  authorId        String    @map("author_id")
+  authorUsername  String    @map("author_username")
+  content         String
+  createdAt       DateTime  @map("created_at")
+  collectedAt     DateTime  @default(now()) @map("collected_at")
+
+  // メトリクス
+  likeCount       Int       @default(0) @map("like_count")
+  repostCount     Int       @default(0) @map("repost_count")
+  replyCount      Int       @default(0) @map("reply_count")
+  impressionCount Int?      @map("impression_count")
+  followerCount   Int       @default(0) @map("follower_count")
+
+  // スコア
+  baseScore       Float?    @map("base_score")
+  velocityScore   Float?    @map("velocity_score")
+  efficiencyScore Float?    @map("efficiency_score")
+  semanticScore   Float?    @map("semantic_score")
+  finalScore      Float?    @map("final_score")
+
+  // フラグ
+  isPriority      Boolean   @default(false) @map("is_priority")
+  isTopPick       Boolean   @default(false) @map("is_top_pick")
+  usedInNote      Boolean   @default(false) @map("used_in_note")
+  usedInKindle    Boolean   @default(false) @map("used_in_kindle")
+
+  // リレーション
+  articles        ArticleTweet[]
+
+  @@map("tweets")
+  @@index([collectedAt])
+  @@index([finalScore])
+  @@index([isPriority])
+}
+
+// 優先インフルエンサー
+model Influencer {
+  id        String   @id @default(cuid())
+  userId    String   @unique @map("user_id")
+  username  String   @unique
+  name      String
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("influencers")
+}
+
+// 検索キーワード
+model Keyword {
+  id        String   @id @default(cuid())
+  keyword   String   @unique
+  weight    Float    @default(1.0)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("keywords")
+}
+
+// 生成記事
+model Article {
+  id          String         @id @default(cuid())
+  type        ArticleType
+  title       String
+  body        String
+  wordCount   Int            @map("word_count")
+  price       Int?
+  status      ArticleStatus  @default(DRAFT)
+  createdAt   DateTime       @default(now()) @map("created_at")
+  publishedAt DateTime?      @map("published_at")
+
+  // リレーション
+  tweets      ArticleTweet[]
+
+  @@map("articles")
+}
+
+// 記事-投稿 中間テーブル
+model ArticleTweet {
+  articleId String  @map("article_id")
+  tweetId   String  @map("tweet_id")
+  article   Article @relation(fields: [articleId], references: [id])
+  tweet     Tweet   @relation(fields: [tweetId], references: [id])
+
+  @@id([articleId, tweetId])
+  @@map("article_tweets")
+}
+
+// 日次実行ログ
+model DailyLog {
+  id              String   @id @default(cuid())
+  date            DateTime @unique
+  tweetsCollected Int      @map("tweets_collected")
+  tweetsScored    Int      @map("tweets_scored")
+  topPickIds      String[] @map("top_pick_ids")
+  discordSent     Boolean  @default(false) @map("discord_sent")
+  errors          String?
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@map("daily_logs")
+}
+
+enum ArticleType {
+  NOTE_FREE
+  NOTE_PAID
+  KINDLE
+  YOUTUBE_SCRIPT
+}
+
+enum ArticleStatus {
+  DRAFT
+  REVIEW
+  PUBLISHED
+}

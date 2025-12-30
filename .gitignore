@@ -1,0 +1,19 @@
+node_modules/
+.DS_Store
+*.log
+.env
+dist/
+*.tsbuildinfo
+
+# データ・出力（機密情報含む）
+data/
+output/
+credentials.json
+*.png
+/tmp/
+
+# アーカイブ（未使用ファイル）
+_archive/
+
+# ライセンス・機密
+license.key

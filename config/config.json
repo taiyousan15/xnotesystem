@@ -1,0 +1,63 @@
+{
+  "scoring": {
+    "weights": {
+      "base": 0.25,
+      "velocity": 0.25,
+      "efficiency": 0.25,
+      "semantic": 0.25
+    },
+    "priority_bonus": 15,
+    "top_pick_count": 2
+  },
+  "collection": {
+    "max_tweets_per_keyword": 100,
+    "max_tweets_per_influencer": 50,
+    "lookback_hours": 24,
+    "keywords": [
+      "ChatGPT",
+      "Claude",
+      "GPT-4",
+      "GPT-5",
+      "LLM",
+      "生成AI",
+      "AI Agent",
+      "Anthropic",
+      "OpenAI",
+      "Gemini"
+    ]
+  },
+  "influencers": [
+    "@SuguruKun_ai",
+    "@taishiyade",
+    "@ceo_tommy1",
+    "@rute1203d",
+    "@The_AGI_WAY",
+    "@unikoukokun",
+    "@kamui_qai"
+  ],
+  "note": {
+    "max_paid_per_week": 2,
+    "price": 480,
+    "word_counts": [7000, 10000, 12000, 15000]
+  },
+  "kindle": {
+    "min_pages": 50,
+    "max_pages": 100,
+    "structure": [
+      "巻頭言",
+      "最重要特集",
+      "ニュースダイジェスト",
+      "インフルエンサー視点",
+      "実務ヒント",
+      "予測・CTA"
+    ]
+  },
+  "discord": {
+    "daily_time": "00:00",
+    "weekly_day": "sunday"
+  },
+  "retry": {
+    "max_attempts": 3,
+    "backoff_ms": 1000
+  }
+}

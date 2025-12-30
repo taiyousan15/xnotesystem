@@ -1,0 +1,112 @@
+{
+  "queries": {
+    "breaking": [
+      {
+        "id": "Q1",
+        "name": "公式リリース（英）",
+        "category": "NEWS",
+        "query": "(from:OpenAI OR from:GoogleAI OR from:AnthropicAI OR from:MetaAI OR from:xai) (\"release\" OR \"launch\" OR \"update\" OR \"announcing\" OR \"new\") -is:retweet lang:en",
+        "count": 20,
+        "lang": "en"
+      },
+      {
+        "id": "Q2",
+        "name": "研究・論文（英）",
+        "category": "RESEARCH",
+        "query": "(\"paper\" OR \"arxiv\" OR \"preprint\" OR \"benchmark\" OR \"SOTA\" OR \"state of the art\") (\"LLM\" OR \"diffusion\" OR \"multimodal\" OR \"reasoning\") -is:retweet lang:en",
+        "count": 20,
+        "lang": "en"
+      },
+      {
+        "id": "Q3",
+        "name": "プロダクト新作（英）",
+        "category": "TOOL",
+        "query": "(\"new tool\" OR \"just shipped\" OR \"now supports\" OR \"available\" OR \"beta\") (\"AI\" OR \"LLM\" OR \"agent\" OR \"image\" OR \"video\") -is:retweet lang:en",
+        "count": 20,
+        "lang": "en"
+      },
+      {
+        "id": "Q4",
+        "name": "規制・炎上・議論（英）",
+        "category": "POLICY",
+        "query": "(\"copyright\" OR \"lawsuit\" OR \"regulation\" OR \"policy\" OR \"ban\" OR \"ethics\") (\"AI\" OR \"LLM\" OR \"deepfake\") -is:retweet lang:en",
+        "count": 20,
+        "lang": "en"
+      },
+      {
+        "id": "Q5",
+        "name": "日本語ニュース",
+        "category": "JP",
+        "query": "(\"生成AI\" OR \"AI\" OR \"LLM\") (\"発表\" OR \"リリース\" OR \"アップデート\" OR \"新機能\" OR \"提供開始\") -is:retweet lang:ja",
+        "count": 40,
+        "lang": "ja"
+      }
+    ],
+    "practical": [
+      {
+        "id": "Q6",
+        "name": "開発・コード・OSS（英）",
+        "category": "DEV",
+        "query": "(\"open source\" OR \"repo\" OR \"github\" OR \"library\" OR \"framework\" OR \"API\") (\"LLM\" OR \"agents\" OR \"RAG\" OR \"vector database\" OR \"prompt\") -is:retweet lang:en",
+        "count": 20,
+        "lang": "en"
+      },
+      {
+        "id": "Q7",
+        "name": "エージェント/RAG/運用（英）",
+        "category": "OPS",
+        "query": "(\"agent\" OR \"agents\" OR \"RAG\" OR \"retrieval\" OR \"orchestration\" OR \"workflow\" OR \"tool use\") (\"LLM\" OR \"AI\") -is:retweet lang:en",
+        "count": 20,
+        "lang": "en"
+      },
+      {
+        "id": "Q8",
+        "name": "AI×ビジネス/収益（英）",
+        "category": "BIZ",
+        "query": "(\"revenue\" OR \"MRR\" OR \"customers\" OR \"pricing\" OR \"growth\" OR \"startup\") (\"AI\" OR \"LLM\" OR \"agents\") -is:retweet lang:en",
+        "count": 20,
+        "lang": "en"
+      },
+      {
+        "id": "Q9",
+        "name": "セキュリティ/安全（英）",
+        "category": "SECURITY",
+        "query": "(\"jailbreak\" OR \"prompt injection\" OR \"model security\" OR \"alignment\" OR \"safety\") (\"LLM\" OR \"AI\") -is:retweet lang:en",
+        "count": 20,
+        "lang": "en"
+      },
+      {
+        "id": "Q10",
+        "name": "日本語活用事例（実務/副業）",
+        "category": "JP",
+        "query": "(\"生成AI\" OR \"AI活用\" OR \"ChatGPT\" OR \"Claude\" OR \"Gemini\") (\"業務効率化\" OR \"自動化\" OR \"副業\" OR \"マーケ\" OR \"コンテンツ\" OR \"開発\") -is:retweet lang:ja",
+        "count": 40,
+        "lang": "ja"
+      },
+      {
+        "id": "Q11",
+        "name": "優先インフルエンサー（日本）",
+        "category": "JP",
+        "query": "(from:SuguruKun_ai OR from:taishiyade OR from:ceo_tommy1 OR from:rute1203d OR from:The_AGI_WAY OR from:unikoukokun OR from:kamui_qai) -is:retweet",
+        "count": 50,
+        "lang": "ja",
+        "priority": true
+      }
+    ]
+  },
+  "discord": {
+    "channels": {
+      "raw": "DISCORD_WEBHOOK_RAW",
+      "news": "DISCORD_WEBHOOK_NEWS",
+      "practice": "DISCORD_WEBHOOK_PRACTICE",
+      "noteDraft": "DISCORD_WEBHOOK_NOTE_DRAFT",
+      "notePaid": "DISCORD_WEBHOOK_NOTE_PAID"
+    }
+  },
+  "rateLimit": {
+    "delayBetweenQueries": 120000,
+    "maxRetries": 3,
+    "backoffMultiplier": 2,
+    "initialBackoffMs": 120000
+  }
+}
