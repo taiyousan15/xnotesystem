@@ -3,94 +3,93 @@
     "breaking": [
       {
         "id": "Q1",
-        "name": "公式リリース（英）",
+        "name": "速報・ニュースアグリゲーター",
         "category": "NEWS",
-        "query": "(from:OpenAI OR from:GoogleAI OR from:AnthropicAI OR from:MetaAI OR from:xai) (\"release\" OR \"launch\" OR \"update\" OR \"announcing\" OR \"new\") -is:retweet lang:en",
-        "count": 20,
+        "query": "(from:_akhaliq OR from:rowancheung OR from:btibor91 OR from:therundownai OR from:omarsar0 OR from:emollick OR from:bindureddy OR from:AndrewCurrier OR from:Suhail OR from:bentossell) -is:retweet",
+        "count": 100,
         "lang": "en"
       },
       {
         "id": "Q2",
-        "name": "研究・論文（英）",
-        "category": "RESEARCH",
-        "query": "(\"paper\" OR \"arxiv\" OR \"preprint\" OR \"benchmark\" OR \"SOTA\" OR \"state of the art\") (\"LLM\" OR \"diffusion\" OR \"multimodal\" OR \"reasoning\") -is:retweet lang:en",
-        "count": 20,
+        "name": "企業公式（AI大手）",
+        "category": "NEWS",
+        "query": "(from:AnthropicAI OR from:OpenAIDevs OR from:GoogleDeepMind OR from:MetaAI OR from:huggingface OR from:LangChainAI OR from:llama_index OR from:lmsysorg OR from:MistralAI OR from:StabilityAI) -is:retweet",
+        "count": 100,
         "lang": "en"
       },
       {
         "id": "Q3",
-        "name": "プロダクト新作（英）",
-        "category": "TOOL",
-        "query": "(\"new tool\" OR \"just shipped\" OR \"now supports\" OR \"available\" OR \"beta\") (\"AI\" OR \"LLM\" OR \"agent\" OR \"image\" OR \"video\") -is:retweet lang:en",
-        "count": 20,
+        "name": "創業者・CEO",
+        "category": "NEWS",
+        "query": "(from:sama OR from:gdb OR from:demishassabis OR from:ylecun OR from:ClementDelangue OR from:aravindsrinivas OR from:rauchg OR from:natfriedman OR from:hwchase17 OR from:jerryjliu0) -is:retweet",
+        "count": 100,
         "lang": "en"
       },
       {
         "id": "Q4",
-        "name": "規制・炎上・議論（英）",
-        "category": "POLICY",
-        "query": "(\"copyright\" OR \"lawsuit\" OR \"regulation\" OR \"policy\" OR \"ban\" OR \"ethics\") (\"AI\" OR \"LLM\" OR \"deepfake\") -is:retweet lang:en",
-        "count": 20,
+        "name": "研究者・教育者",
+        "category": "RESEARCH",
+        "query": "(from:karpathy OR from:AndrewYNg OR from:DrJimFan OR from:JeffDean OR from:lilianweng OR from:jeremyphoward OR from:abacaj OR from:goodside OR from:svpino OR from:dair_ai) -is:retweet",
+        "count": 100,
         "lang": "en"
-      },
-      {
-        "id": "Q5",
-        "name": "日本語ニュース",
-        "category": "JP",
-        "query": "(\"生成AI\" OR \"AI\" OR \"LLM\") (\"発表\" OR \"リリース\" OR \"アップデート\" OR \"新機能\" OR \"提供開始\") -is:retweet lang:ja",
-        "count": 40,
-        "lang": "ja"
       }
     ],
     "practical": [
       {
-        "id": "Q6",
-        "name": "開発・コード・OSS（英）",
+        "id": "Q5",
+        "name": "Vibe Coder・ビルダー①",
         "category": "DEV",
-        "query": "(\"open source\" OR \"repo\" OR \"github\" OR \"library\" OR \"framework\" OR \"API\") (\"LLM\" OR \"agents\" OR \"RAG\" OR \"vector database\" OR \"prompt\") -is:retweet lang:en",
-        "count": 20,
+        "query": "(from:mckaywrigley OR from:IndyDevDan OR from:skirano OR from:simonw OR from:swyx OR from:mattshumer_ OR from:AlexFinnX OR from:alliekmiller OR from:LinusEkenstam OR from:nickfloats) -is:retweet",
+        "count": 100,
+        "lang": "en"
+      },
+      {
+        "id": "Q6",
+        "name": "Vibe Coder・ビルダー②",
+        "category": "DEV",
+        "query": "(from:SullyOmarr OR from:steventey OR from:leerob OR from:Nutlope OR from:shpigford OR from:gregisenberg OR from:kellee OR from:ammaar OR from:javilopen OR from:minchoi) -is:retweet",
+        "count": 100,
         "lang": "en"
       },
       {
         "id": "Q7",
-        "name": "エージェント/RAG/運用（英）",
-        "category": "OPS",
-        "query": "(\"agent\" OR \"agents\" OR \"RAG\" OR \"retrieval\" OR \"orchestration\" OR \"workflow\" OR \"tool use\") (\"LLM\" OR \"AI\") -is:retweet lang:en",
-        "count": 20,
+        "name": "インディーハッカー・起業家",
+        "category": "BIZ",
+        "query": "(from:levelsio OR from:marc_louvion OR from:yoheinakajima OR from:dannypostma OR from:MayoOshin OR from:heyzainkahn OR from:paul_couvert OR from:moritzkremb OR from:isabellabedoya OR from:shubrosaha) -is:retweet",
+        "count": 100,
         "lang": "en"
       },
       {
         "id": "Q8",
-        "name": "AI×ビジネス/収益（英）",
-        "category": "BIZ",
-        "query": "(\"revenue\" OR \"MRR\" OR \"customers\" OR \"pricing\" OR \"growth\" OR \"startup\") (\"AI\" OR \"LLM\" OR \"agents\") -is:retweet lang:en",
-        "count": 20,
+        "name": "AIツール公式",
+        "category": "TOOL",
+        "query": "(from:cursor_ai OR from:Replit OR from:codeiumdev OR from:perplexity_ai OR from:ollama OR from:UnslothAI OR from:elevenlabsio OR from:midjourney OR from:runwayml OR from:pinecone) -is:retweet",
+        "count": 100,
         "lang": "en"
       },
       {
         "id": "Q9",
-        "name": "セキュリティ/安全（英）",
-        "category": "SECURITY",
-        "query": "(\"jailbreak\" OR \"prompt injection\" OR \"model security\" OR \"alignment\" OR \"safety\") (\"LLM\" OR \"AI\") -is:retweet lang:en",
-        "count": 20,
+        "name": "プラットフォーム・コミュニティ",
+        "category": "TOOL",
+        "query": "(from:vercel OR from:supabase OR from:ycombinator OR from:ProductHunt OR from:Cohere OR from:NousResearch OR from:weights_biases OR from:Kaggle OR from:DeepLearningAI OR from:paperswithcode) -is:retweet",
+        "count": 100,
         "lang": "en"
       },
       {
         "id": "Q10",
-        "name": "日本語活用事例（実務/副業）",
-        "category": "JP",
-        "query": "(\"生成AI\" OR \"AI活用\" OR \"ChatGPT\" OR \"Claude\" OR \"Gemini\") (\"業務効率化\" OR \"自動化\" OR \"副業\" OR \"マーケ\" OR \"コンテンツ\" OR \"開発\") -is:retweet lang:ja",
-        "count": 40,
-        "lang": "ja"
+        "name": "ニュースレター・メディア",
+        "category": "NEWS",
+        "query": "(from:tldrnewsletter OR from:bensbites OR from:pedaily OR from:AiBreakfast OR from:TheNeuronDaily OR from:Superhuman_AI OR from:AlphaSignalAI OR from:LastWeekinAI OR from:AiValley OR from:TheresAIForThat OR from:FutureToolsio) -is:retweet",
+        "count": 100,
+        "lang": "en"
       },
       {
         "id": "Q11",
-        "name": "優先インフルエンサー（日本）",
-        "category": "JP",
-        "query": "(from:SuguruKun_ai OR from:taishiyade OR from:ceo_tommy1 OR from:rute1203d OR from:The_AGI_WAY OR from:unikoukokun OR from:kamui_qai) -is:retweet",
+        "name": "その他重要アカウント",
+        "category": "DEV",
+        "query": "(from:paulg OR from:heyBarsee OR from:arxiv_cs_ai OR from:alvaromontoro OR from:tsubasatwi) -is:retweet",
         "count": 50,
-        "lang": "ja",
-        "priority": true
+        "lang": "en"
       }
     ]
   },

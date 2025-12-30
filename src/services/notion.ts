@@ -362,3 +362,240 @@ export async function syncDailyToNotion(
     return { success: false, synced: 0 };
   }
 }
+
+/**
+ * AIニュース収集データをNotionに保存（ai-news-collect.ts用）
+ */
+interface AINewsPost {
+  category: string;
+  tag: string;
+  title: string;
+  url: string;
+  metrics: {
+    likes: number;
+    retweets: number;
+    replies: number;
+    quotes: number;
+  };
+  datetime: string;
+  author: string;
+  raw: {
+    id: string;
+    authorUsername: string;
+    content: string;
+    createdAt: string;
+    isBreaking: boolean;
+  };
+}
+
+export async function saveTweetsToNotionFromAINews(
+  posts: AINewsPost[],
+  topPickIds: string[] = [],
+  starIds: string[] = []
+): Promise<{ saved: number; errors: number }> {
+  const client = getClient();
+  const databaseId = getDatabaseId();
+
+  let saved = 0;
+  let errors = 0;
+
+  for (const post of posts) {
+    const isTopPick = topPickIds.includes(post.raw.id);
+    const isStar = starIds.includes(post.raw.id);
+
+    try {
+      await client.pages.create({
+        parent: { database_id: databaseId },
+        properties: {
+          Title: {
+            title: [{ text: { content: post.title.slice(0, 50) } }],
+          },
+          'Tweet ID': {
+            rich_text: [{ text: { content: post.raw.id } }],
+          },
+          Author: {
+            rich_text: [{ text: { content: post.author } }],
+          },
+          Score: {
+            number: post.metrics.likes + post.metrics.retweets * 2,
+          },
+          Category: {
+            select: { name: mapCategory(post.category) },
+          },
+          Priority: {
+            checkbox: false,
+          },
+          'Top Pick': {
+            checkbox: isTopPick,
+          },
+          Date: {
+            date: { start: post.datetime.split(' ')[0] },
+          },
+          'Note Status': {
+            select: { name: isStar ? 'Candidate' : 'Unused' },
+          },
+          'Kindle Status': {
+            select: { name: 'Unused' },
+          },
+          'VIP Only': {
+            checkbox: false,
+          },
+        },
+      });
+
+      saved++;
+    } catch (error) {
+      logger.error(`Failed to save post ${post.raw.id} to Notion:`, error);
+      errors++;
+    }
+
+    // レート制限対策
+    await new Promise((resolve) => setTimeout(resolve, 350));
+  }
+
+  logger.info(`Notion sync completed: ${saved} saved, ${errors} errors`);
+  return { saved, errors };
+}
+
+/**
+ * カテゴリをNotionのセレクトオプションにマッピング
+ */
+function mapCategory(category: string): string {
+  const mapping: Record<string, string> = {
+    'NEWS': 'News',
+    'RESEARCH': 'AI',
+    'TOOL': 'Tool',
+    'DEV': 'Tool',
+    'OPS': 'Tool',
+    'BIZ': 'Opinion',
+    'POLICY': 'Opinion',
+    'SECURITY': 'Tool',
+    'JP': 'News',
+  };
+  return mapping[category] || 'Opinion';
+}
+
+/**
+ * 週次まとめをNotionページとして保存
+ */
+export async function saveWeeklySummaryToNotion(
+  title: string,
+  content: string,
+  date: string,
+  type: 'tuesday' | 'friday'
+): Promise<string | null> {
+  const client = getClient();
+
+  // 週次まとめ用の親ページID（環境変数から取得、なければデフォルトのDBに保存）
+  const parentPageId = process.env.NOTION_WEEKLY_PARENT_ID;
+
+  try {
+    const response = await client.pages.create({
+      parent: parentPageId
+        ? { page_id: parentPageId }
+        : { database_id: getDatabaseId() },
+      properties: parentPageId
+        ? {
+            title: {
+              title: [{ text: { content: title } }],
+            },
+          }
+        : {
+            Title: {
+              title: [{ text: { content: title } }],
+            },
+            'Tweet ID': {
+              rich_text: [{ text: { content: `weekly_${type}_${date}` } }],
+            },
+            Author: {
+              rich_text: [{ text: { content: '@system' } }],
+            },
+            Score: { number: 100 },
+            Category: { select: { name: 'News' } },
+            Priority: { checkbox: true },
+            'Top Pick': { checkbox: true },
+            Date: { date: { start: date } },
+            'Note Status': { select: { name: type === 'friday' ? 'Used' : 'Unused' } },
+            'Kindle Status': { select: { name: 'Unused' } },
+            'VIP Only': { checkbox: true },
+          },
+      children: splitContentToBlocks(content),
+    });
+
+    logger.info(`Weekly summary saved to Notion: ${response.id}`);
+    return response.id;
+  } catch (error) {
+    logger.error('Failed to save weekly summary to Notion:', error);
+    return null;
+  }
+}
+
+/**
+ * コンテンツをNotionブロックに分割
+ */
+function splitContentToBlocks(content: string): any[] {
+  const blocks: any[] = [];
+  const lines = content.split('\n');
+
+  for (const line of lines) {
+    if (line.startsWith('# ')) {
+      blocks.push({
+        object: 'block',
+        type: 'heading_1',
+        heading_1: {
+          rich_text: [{ type: 'text', text: { content: line.slice(2) } }],
+        },
+      });
+    } else if (line.startsWith('## ')) {
+      blocks.push({
+        object: 'block',
+        type: 'heading_2',
+        heading_2: {
+          rich_text: [{ type: 'text', text: { content: line.slice(3) } }],
+        },
+      });
+    } else if (line.startsWith('### ')) {
+      blocks.push({
+        object: 'block',
+        type: 'heading_3',
+        heading_3: {
+          rich_text: [{ type: 'text', text: { content: line.slice(4) } }],
+        },
+      });
+    } else if (line.startsWith('- ')) {
+      blocks.push({
+        object: 'block',
+        type: 'bulleted_list_item',
+        bulleted_list_item: {
+          rich_text: [{ type: 'text', text: { content: line.slice(2) } }],
+        },
+      });
+    } else if (line.trim()) {
+      // Notionのrich_textは2000文字制限があるため分割
+      const chunks = chunkString(line, 2000);
+      for (const chunk of chunks) {
+        blocks.push({
+          object: 'block',
+          type: 'paragraph',
+          paragraph: {
+            rich_text: [{ type: 'text', text: { content: chunk } }],
+          },
+        });
+      }
+    }
+  }
+
+  // Notion APIは100ブロックまでしか一度に送れない
+  return blocks.slice(0, 100);
+}
+
+/**
+ * 文字列を指定長で分割
+ */
+function chunkString(str: string, length: number): string[] {
+  const chunks: string[] = [];
+  for (let i = 0; i < str.length; i += length) {
+    chunks.push(str.slice(i, i + length));
+  }
+  return chunks;
+}

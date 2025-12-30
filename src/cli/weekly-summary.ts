@@ -14,6 +14,7 @@ import { execSync } from 'child_process';
 import Anthropic from '@anthropic-ai/sdk';
 import { logger } from '../utils/logger.js';
 import { loadConfig } from '../utils/config.js';
+import { saveWeeklySummaryToNotion } from '../services/notion.js';
 
 const config = loadConfig();
 const program = new Command();
@@ -59,6 +60,7 @@ program
   .option('--days <n>', '過去N日分を集約', '7')
   .option('--dry-run', 'Discord投稿をスキップ')
   .option('--post-to-note', 'noteに自動投稿（金曜日のみ有料480円で公開）')
+  .option('--no-notion', 'Notion保存をスキップ')
   .option('-o, --output <path>', '出力先ディレクトリ', './output/weekly-summary')
   .action(async (options) => {
     const mode = options.tuesday ? 'tuesday' : options.friday ? 'friday' : null;
@@ -110,6 +112,28 @@ program
         logger.info('  Discord投稿完了');
       } else {
         logger.info('Step 4: dry-runモード - Discord投稿スキップ');
+      }
+
+      // Step 4.5: Notionに保存
+      if (options.notion !== false && process.env.NOTION_API_KEY && process.env.NOTION_DATABASE_ID) {
+        logger.info('Step 4.5: Notionに保存中...');
+        const theme = mode === 'tuesday' ? '今週のAI速報まとめ' : '今週のAI実務・収益化ヒント';
+        const notionTitle = `【${weeklyData.dateRange.split('〜')[1]?.trim() || '週次'}】${theme}`;
+        const notionPageId = await saveWeeklySummaryToNotion(
+          notionTitle,
+          article.content,
+          timestamp,
+          mode
+        );
+        if (notionPageId) {
+          logger.info(`  Notion保存完了: ${notionPageId}`);
+        } else {
+          logger.warn('  Notion保存に失敗しました');
+        }
+      } else if (options.notion === false) {
+        logger.info('Step 4.5: --no-notionモード - Notion保存スキップ');
+      } else {
+        logger.info('Step 4.5: Notion設定なし - Notion保存スキップ');
       }
 
       // Step 5: noteに投稿（オプション）

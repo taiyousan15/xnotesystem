@@ -6,6 +6,8 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { logger } from '../utils/logger.js';
+import { saveTweetsToNotionFromAINews } from '../services/notion.js';
+import { analyzeTweetsBatch, testOllamaConnection } from '../services/ollama-analyzer.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -94,6 +96,9 @@ program
   .option('--dry-run', 'Discord投稿をスキップ')
   .option('--breaking-only', '速報系クエリのみ実行')
   .option('--practical-only', '実務系クエリのみ実行')
+  .option('--no-notion', 'Notion保存をスキップ')
+  .option('--analyze', 'Ollamaで要点解析を実行（Why/Action生成）')
+  .option('--model <name>', 'Ollamaモデル指定（デフォルト: llama3.2:3b）')
   .action(async (options) => {
     logger.info('='.repeat(60));
     logger.info('AIニュース収集システム 開始');
@@ -159,8 +164,26 @@ program
         tag: determineTag(tweet)
       }));
 
+      // Ollama解析（--analyze オプション時）
+      let analysisResults: Map<string, { why: string; action: string }> | null = null;
+      if (options.analyze) {
+        const ollamaOk = await testOllamaConnection();
+        if (ollamaOk) {
+          logger.info('Ollama解析を開始...');
+          const tweetsForAnalysis = taggedTweets.map(t => ({
+            id: t.id,
+            content: t.content,
+            category: t.category,
+            author: t.authorUsername,
+          }));
+          analysisResults = await analyzeTweetsBatch(tweetsForAnalysis);
+        } else {
+          logger.warn('Ollama未接続のため解析をスキップ');
+        }
+      }
+
       // 整形
-      const formattedPosts = taggedTweets.map(formatPost);
+      const formattedPosts = taggedTweets.map(tweet => formatPost(tweet, analysisResults));
 
       // 速報ピック（上位10件）
       const breakingPicks = selectTopPicks(
@@ -214,6 +237,18 @@ program
         await postToDiscord(outputData, config);
       } else {
         logger.info('dry-run モード: Discord投稿をスキップ');
+      }
+
+      // Notion保存（--no-notionでなければ）
+      if (options.notion !== false && process.env.NOTION_API_KEY && process.env.NOTION_DATABASE_ID) {
+        logger.info('Notion保存を実行...');
+        const topPickIds = [...breakingPicks, ...practicalPicks].map(p => p.raw.id);
+        const result = await saveTweetsToNotionFromAINews(formattedPosts, topPickIds, starPosts.map(p => p.raw.id));
+        logger.info(`Notion保存完了: ${result.saved} 件保存, ${result.errors} 件エラー`);
+      } else if (options.notion === false) {
+        logger.info('--no-notion モード: Notion保存をスキップ');
+      } else {
+        logger.info('Notion設定なし: Notion保存をスキップ');
       }
 
       // コンソール出力
@@ -357,8 +392,14 @@ function determineTag(tweet: CollectedTweet): Tag {
 // 整形
 // ============================================
 
-function formatPost(tweet: CollectedTweet): FormattedPost {
+function formatPost(
+  tweet: CollectedTweet,
+  analysisResults: Map<string, { why: string; action: string }> | null = null
+): FormattedPost {
   const title = tweet.content.split('\n')[0].slice(0, 50);
+
+  // Ollama解析結果があれば使用
+  const analysis = analysisResults?.get(tweet.id);
 
   return {
     category: tweet.category,
@@ -366,8 +407,8 @@ function formatPost(tweet: CollectedTweet): FormattedPost {
     title,
     summary: {
       what: extractWhat(tweet.content),
-      why: extractWhy(tweet.content),
-      action: extractAction(tweet.content),
+      why: analysis?.why || extractWhyFallback(tweet),
+      action: analysis?.action || extractActionFallback(tweet),
     },
     url: tweet.url,
     metrics: {
@@ -383,13 +424,39 @@ function formatPost(tweet: CollectedTweet): FormattedPost {
 }
 
 function extractWhat(content: string): string {
-  // 最初の文または最初の50文字
+  // 最初の文または最初の80文字
   const firstSentence = content.split(/[。.!！\n]/)[0];
   return firstSentence.slice(0, 80) || content.slice(0, 80);
 }
 
-function extractWhy(_content: string): string {
-  return '（LLMで解析予定）';
+function extractWhyFallback(tweet: CollectedTweet): string {
+  // カテゴリに基づくフォールバック
+  const categoryMessages: Record<string, string> = {
+    'NEWS': '最新のAI業界動向を把握するため',
+    'RESEARCH': '最先端の研究成果を知るため',
+    'TOOL': '新しいAIツールの活用機会を発見するため',
+    'DEV': '開発効率化のヒントを得るため',
+    'OPS': 'AIシステム運用の知見を得るため',
+    'BIZ': 'AI収益化のアイデアを得るため',
+    'POLICY': 'AI規制の動向を把握するため',
+    'SECURITY': 'AIセキュリティ対策を学ぶため',
+    'JP': '日本のAI活用事例を知るため',
+  };
+  return categoryMessages[tweet.category] || 'AI分野の最新情報として';
+}
+
+function extractActionFallback(tweet: CollectedTweet): string {
+  // タグに基づくフォールバック
+  if (tweet.tag === 'STAR') {
+    return '手順を参考に実践してみる';
+  }
+  if (tweet.tag === 'DEEP') {
+    return '詳細を深掘りして理解を深める';
+  }
+  if (tweet.content.includes('github.com') || tweet.content.includes('http')) {
+    return 'リンク先をチェックする';
+  }
+  return '詳細を確認して活用を検討';
 }
 
 function extractAction(_content: string): string {
