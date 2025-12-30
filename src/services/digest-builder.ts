@@ -15,10 +15,10 @@ import {
   ALL_TYPES,
   DEFAULT_DIGEST_CONFIG,
 } from '../types/digest.js';
-import { analyzeAllTweets } from './llm-analyzer.js';
+import { analyzeAllTweets, checkOllamaConnection } from './llm-analyzer.js';
 import { resolveLinksFromTweet, initLinkCache, closeLinkCache } from './link-resolver.js';
 import { extractTopics, getTopicStats } from './topic-extractor.js';
-import { upsertTweets, getDatabaseParentId, createDigestPage } from './notion-upsert.js';
+import { upsertTweets, getDatabaseParentId, createDigestPage, updateTopPickFlags } from './notion-upsert.js';
 import { buildTweetPageContent, buildDigestPageContent } from './notion-page-builder.js';
 import { logger } from '../utils/logger.js';
 
@@ -232,6 +232,17 @@ export async function buildDailyDigest(
   initLinkCache();
 
   try {
+    // Phase 1.5: Ollama接続確認
+    logger.info('Phase 1.5: Checking Ollama connection...');
+    const ollamaStatus = await checkOllamaConnection();
+    if (!ollamaStatus.connected) {
+      throw new Error(`Ollama server not available: ${ollamaStatus.error}`);
+    }
+    if (!ollamaStatus.modelAvailable) {
+      logger.warn(`Ollama model warning: ${ollamaStatus.error}`);
+    }
+    logger.info('Ollama connection OK');
+
     // Phase 2: LLM解析（全件）
     logger.info('Phase 2: LLM analysis...');
     const analysisResults = await analyzeAllTweets(collectedTweets);
@@ -257,15 +268,21 @@ export async function buildDailyDigest(
       });
     }
 
-    // Phase 3: リンク解析
+    // Phase 3: リンク解析（並列化、同時5件）
     logger.info('Phase 3: Link resolution...');
-    for (const tweet of analyzedTweets) {
-      try {
-        tweet.links = await resolveLinksFromTweet(tweet.content);
-      } catch (error) {
-        errors.push(`Link resolution failed for ${tweet.id}: ${error}`);
-        tweet.links = [];
-      }
+    const LINK_CONCURRENCY = 5;
+    for (let i = 0; i < analyzedTweets.length; i += LINK_CONCURRENCY) {
+      const batch = analyzedTweets.slice(i, i + LINK_CONCURRENCY);
+      await Promise.all(
+        batch.map(async (tweet) => {
+          try {
+            tweet.links = await resolveLinksFromTweet(tweet.content);
+          } catch (error) {
+            errors.push(`Link resolution failed for ${tweet.id}: ${error}`);
+            tweet.links = [];
+          }
+        })
+      );
     }
 
     // Phase 4: 統合スコア計算
@@ -313,11 +330,17 @@ export async function buildDailyDigest(
       );
 
       // Top Picksの更新
+      const topPickPageIds: string[] = [];
       for (const tweet of topPicks) {
         const pageId = upsertResult.pageIds.get(tweet.id);
         if (pageId) {
-          // Top Pickフラグを更新（別途実装が必要な場合）
+          topPickPageIds.push(pageId);
         }
+      }
+
+      if (topPickPageIds.length > 0) {
+        logger.info(`Updating ${topPickPageIds.length} Top Pick flags...`);
+        await updateTopPickFlags(topPickPageIds, true);
       }
 
       // 日次ダイジェストページ作成
@@ -382,11 +405,44 @@ export function serializeDigestResult(result: DigestResult): string {
 }
 
 /**
+ * Discord文字数制限（2000文字）を考慮して分割
+ */
+function splitForDiscord(text: string, maxLength: number = 1900): string[] {
+  if (text.length <= maxLength) return [text];
+
+  const chunks: string[] = [];
+  const lines = text.split('\n');
+  let currentChunk = '';
+
+  for (const line of lines) {
+    if ((currentChunk + '\n' + line).length > maxLength) {
+      if (currentChunk) {
+        chunks.push(currentChunk);
+        currentChunk = line;
+      } else {
+        // 1行が長すぎる場合は強制分割
+        chunks.push(line.slice(0, maxLength));
+        currentChunk = line.slice(maxLength);
+      }
+    } else {
+      currentChunk = currentChunk ? currentChunk + '\n' + line : line;
+    }
+  }
+
+  if (currentChunk) {
+    chunks.push(currentChunk);
+  }
+
+  return chunks;
+}
+
+/**
  * Discord投稿用のデータを生成
+ * 各embedは2000文字制限を考慮して分割される
  */
 export function prepareDiscordPost(result: DigestResult): {
-  statsEmbed: string;
-  topicsEmbed: string;
+  statsEmbeds: string[];
+  topicsEmbeds: string[];
   topPicksEmbeds: string[];
   notionUrl: string;
 } {
@@ -434,12 +490,14 @@ export function prepareDiscordPost(result: DigestResult): {
       lines.push('');
     }
 
-    topPicksEmbeds.push(lines.join('\n'));
+    // 各チャンクを分割チェック
+    const chunkText = lines.join('\n');
+    topPicksEmbeds.push(...splitForDiscord(chunkText));
   }
 
   return {
-    statsEmbed: statsLines.join('\n'),
-    topicsEmbed: topicsLines.join('\n'),
+    statsEmbeds: splitForDiscord(statsLines.join('\n')),
+    topicsEmbeds: splitForDiscord(topicsLines.join('\n')),
     topPicksEmbeds,
     notionUrl: result.digestPageUrl || NOTION_DB_VIEW_URL,
   };

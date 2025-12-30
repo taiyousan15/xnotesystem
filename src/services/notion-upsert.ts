@@ -411,6 +411,51 @@ export async function getCategoryStats(
 }
 
 /**
+ * 指定したページのTop Pickフラグを更新
+ */
+export async function updateTopPickFlag(
+  pageId: string,
+  isTopPick: boolean
+): Promise<void> {
+  const client = getClient();
+
+  await withRetry(() =>
+    client.pages.update({
+      page_id: pageId,
+      properties: {
+        'Top Pick': { checkbox: isTopPick },
+      },
+    })
+  );
+}
+
+/**
+ * 複数ページのTop Pickフラグを一括更新
+ */
+export async function updateTopPickFlags(
+  pageIds: string[],
+  isTopPick: boolean
+): Promise<{ success: number; errors: number }> {
+  let success = 0;
+  let errors = 0;
+
+  for (const pageId of pageIds) {
+    try {
+      await updateTopPickFlag(pageId, isTopPick);
+      success++;
+      logger.debug(`Updated Top Pick for page ${pageId}: ${isTopPick}`);
+    } catch (error) {
+      logger.error(`Failed to update Top Pick for page ${pageId}:`, error);
+      errors++;
+    }
+    await sleep(RATE_LIMIT_DELAY);
+  }
+
+  logger.info(`Top Pick update: ${success} success, ${errors} errors`);
+  return { success, errors };
+}
+
+/**
  * Top Pickをリセット（新しい日の処理前）
  */
 export async function resetTopPicks(digestDate: string): Promise<number> {

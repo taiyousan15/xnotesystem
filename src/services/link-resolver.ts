@@ -3,6 +3,7 @@
  * URL解析とSQLiteキャッシュ
  */
 
+import * as fs from 'fs';
 import Database from 'better-sqlite3';
 import { createHash } from 'crypto';
 import { LinkMetadata, LinkCacheRecord, DEFAULT_DIGEST_CONFIG } from '../types/digest.js';
@@ -32,7 +33,6 @@ export function initLinkCache(): void {
 
   // データディレクトリ確保
   const dir = CACHE_PATH.substring(0, CACHE_PATH.lastIndexOf('/'));
-  const fs = require('fs');
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
@@ -119,12 +119,15 @@ function getFromCache(url: string): LinkCacheRecord | null {
 
 /**
  * キャッシュにレコード保存
+ * エラー時は短いTTL（1日）、成功時は通常TTL
  */
 function saveToCache(record: Omit<LinkCacheRecord, 'url_hash' | 'expires_at'> & { error?: string }): void {
   if (!db) initLinkCache();
 
   const hash = hashUrl(record.original_url);
-  const expiresAt = new Date(Date.now() + TTL_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  // エラー時は1日、成功時は通常TTL
+  const ttlDays = record.error ? 1 : TTL_DAYS;
+  const expiresAt = new Date(Date.now() + ttlDays * 24 * 60 * 60 * 1000).toISOString();
 
   db!.prepare(`
     INSERT OR REPLACE INTO link_cache

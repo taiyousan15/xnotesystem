@@ -156,15 +156,19 @@ async function main() {
       if (!webhookUrl) {
         logger.warn('DISCORD_WEBHOOK_NEWS not set, skipping Discord post');
       } else {
-        // 統計投稿
-        await sendDiscordWebhook(webhookUrl, discordData.statsEmbed);
-        await new Promise(r => setTimeout(r, 1000));
+        // 統計投稿（分割対応）
+        for (const embed of discordData.statsEmbeds) {
+          await sendDiscordWebhook(webhookUrl, embed);
+          await new Promise(r => setTimeout(r, 1000));
+        }
 
-        // トピック投稿
-        await sendDiscordWebhook(webhookUrl, discordData.topicsEmbed);
-        await new Promise(r => setTimeout(r, 1000));
+        // トピック投稿（分割対応）
+        for (const embed of discordData.topicsEmbeds) {
+          await sendDiscordWebhook(webhookUrl, embed);
+          await new Promise(r => setTimeout(r, 1000));
+        }
 
-        // Top Picks投稿（分割）
+        // Top Picks投稿（分割済み）
         for (const embed of discordData.topPicksEmbeds) {
           await sendDiscordWebhook(webhookUrl, embed);
           await new Promise(r => setTimeout(r, 1000));

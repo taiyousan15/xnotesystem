@@ -21,7 +21,7 @@ import {
 
 const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.1:70b';
-const OLLAMA_TIMEOUT = parseInt(process.env.OLLAMA_TIMEOUT_MS || '180000', 10);
+const OLLAMA_TIMEOUT = parseInt(process.env.OLLAMA_TIMEOUT || '180000', 10);
 const OLLAMA_CONCURRENCY = parseInt(process.env.OLLAMA_CONCURRENCY || '1', 10);
 
 // ============================================
@@ -74,6 +74,51 @@ const SYSTEM_PROMPT = `あなたはX投稿を日次インテリジェンスに�
 clusterKey生成:
 - リンク先がある場合: URLのドメイン+パス正規化
 - ない場合: 投稿内容の主題キーワード組み合わせ`;
+
+// ============================================
+// 接続確認
+// ============================================
+
+/**
+ * Ollamaサーバーへの接続を確認
+ */
+export async function checkOllamaConnection(): Promise<{
+  connected: boolean;
+  modelAvailable: boolean;
+  error?: string;
+}> {
+  try {
+    // サーバー接続確認
+    const response = await fetch(`${OLLAMA_URL}/api/tags`, {
+      method: 'GET',
+      signal: AbortSignal.timeout(5000),
+    });
+
+    if (!response.ok) {
+      return {
+        connected: false,
+        modelAvailable: false,
+        error: `Server returned ${response.status}`,
+      };
+    }
+
+    const data = await response.json() as { models?: Array<{ name: string }> };
+    const models = data.models || [];
+    const modelAvailable = models.some(m => m.name.includes(OLLAMA_MODEL.split(':')[0]));
+
+    return {
+      connected: true,
+      modelAvailable,
+      error: modelAvailable ? undefined : `Model ${OLLAMA_MODEL} not found. Available: ${models.map(m => m.name).join(', ')}`,
+    };
+  } catch (error) {
+    return {
+      connected: false,
+      modelAvailable: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
 
 // ============================================
 // メイン関数
