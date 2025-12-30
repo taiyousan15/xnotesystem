@@ -1,7 +1,7 @@
 # X AIトレンド収集・収益化システム 完全仕様書
 
-**最終更新**: 2025-12-24
-**システムバージョン**: 2.0
+**最終更新**: 2025-12-31
+**システムバージョン**: 3.0
 
 ---
 
@@ -37,8 +37,8 @@ npm run weekly-summary:friday:dry
 ## 絶対原則
 
 ### 1. 収集ルール
-- 優先インフルエンサー（7名）は **バズ条件に関係なく必ず全件取得**
-- AI関連キーワード（11クエリ）で日次取得
+- **108アカウント**の投稿を11クエリで日次取得（アカウントベース収集）
+- キーワード検索ではなく、厳選されたアカウントからの直接取得
 - 重複排除は `tweet_id` 単位で厳守
 
 ### 2. スコアリング
@@ -58,16 +58,71 @@ priority_account → +15
 
 ---
 
-## 優先インフルエンサー（必須取得）
+## 収集対象アカウント（108アカウント）
 
+### Q1: 速報・ニュースアグリゲーター（10名）
 ```
-@SuguruKun_ai
-@taishiyade
-@ceo_tommy1
-@rute1203d
-@The_AGI_WAY
-@unikoukokun
-@kamui_qai
+@_akhaliq, @rowancheung, @btibor91, @therundownai, @omarsar0
+@emollick, @bindureddy, @AndrewCurrier, @Suhail, @bentossell
+```
+
+### Q2: 企業公式（AI大手）（10名）
+```
+@AnthropicAI, @OpenAIDevs, @GoogleDeepMind, @MetaAI, @huggingface
+@LangChainAI, @llama_index, @lmsysorg, @MistralAI, @StabilityAI
+```
+
+### Q3: 創業者・CEO（10名）
+```
+@sama, @gdb, @demishassabis, @ylecun, @ClementDelangue
+@aravindsrinivas, @rauchg, @natfriedman, @hwchase17, @jerryjliu0
+```
+
+### Q4: 研究者・教育者（10名）
+```
+@karpathy, @AndrewYNg, @DrJimFan, @JeffDean, @lilianweng
+@jeremyphoward, @abacaj, @goodside, @svpino, @dair_ai
+```
+
+### Q5: Vibe Coder・ビルダー①（10名）
+```
+@mckaywrigley, @IndyDevDan, @skirano, @simonw, @swyx
+@mattshumer_, @AlexFinnX, @alliekmiller, @LinusEkenstam, @nickfloats
+```
+
+### Q6: Vibe Coder・ビルダー②（10名）
+```
+@SullyOmarr, @steventey, @leerob, @Nutlope, @shpigford
+@gregisenberg, @kellee, @ammaar, @javilopen, @minchoi
+```
+
+### Q7: インディーハッカー・起業家（10名）
+```
+@levelsio, @marc_louvion, @yoheinakajima, @dannypostma, @MayoOshin
+@heyzainkahn, @paul_couvert, @moritzkremb, @isabellabedoya, @shubrosaha
+```
+
+### Q8: AIツール公式（10名）
+```
+@cursor_ai, @Replit, @codeiumdev, @perplexity_ai, @ollama
+@UnslothAI, @elevenlabsio, @midjourney, @runwayml, @pinecone
+```
+
+### Q9: プラットフォーム・コミュニティ（10名）
+```
+@vercel, @supabase, @ycombinator, @ProductHunt, @Cohere
+@NousResearch, @weights_biases, @Kaggle, @DeepLearningAI, @paperswithcode
+```
+
+### Q10: ニュースレター・メディア（11名）
+```
+@tldrnewsletter, @bensbites, @pedaily, @AiBreakfast, @TheNeuronDaily
+@Superhuman_AI, @AlphaSignalAI, @LastWeekinAI, @AiValley, @TheresAIForThat, @FutureToolsio
+```
+
+### Q11: その他重要アカウント（5名）
+```
+@paulg, @heyBarsee, @arxiv_cs_ai, @alvaromontoro, @tsubasatwi
 ```
 
 ---
@@ -128,6 +183,11 @@ DISCORD_WEBHOOK_WEEKLY_SUMMARY_2=xxx # VIP週次まとめ（2つ目）
 NOTE_EMAIL=xxx                     # noteログインメール
 NOTE_PASSWORD=xxx                  # noteパスワード
 NOTE_USER_NAME=xxx                 # noteユーザー名（オプション）
+
+# === Notion API ===
+NOTION_API_KEY=xxx                 # Notion内部インテグレーションシークレット
+NOTION_DATABASE_ID=xxx             # 収集データ保存先データベースID
+NOTION_WEEKLY_PARENT_ID=xxx        # 週次まとめ保存先ページID（オプション）
 ```
 
 ---
@@ -139,32 +199,32 @@ NOTE_USER_NAME=xxx                 # noteユーザー名（オプション）
 
 ### 実行コマンド
 ```bash
-npm run ai-news              # 本番実行（約20分）
-npm run ai-news:breaking     # 速報のみ（Q1-Q5）
-npm run ai-news:practical    # 実務系のみ（Q6-Q11）
+npm run ai-news              # 本番実行（約22分）
+npm run ai-news:breaking     # 速報のみ（Q1-Q4）
+npm run ai-news:practical    # 実務系のみ（Q5-Q11）
 npm run ai-news:dry          # テスト（Discord投稿なし）
 ```
 
-### 検索クエリ構成（11本）
+### クエリ構成（11本・108アカウント）
 
-#### 速報系（Q1-Q5）
-| ID | 名称 | 件数 | 説明 |
+#### 速報系（Q1-Q4）
+| ID | 名称 | 件数 | 対象 |
 |----|------|------|------|
-| Q1 | 公式リリース（英） | 20 | OpenAI/Google/Anthropic/Meta/xAI |
-| Q2 | 研究論文 | 20 | arXiv/論文/ベンチマーク |
-| Q3 | プロダクト | 20 | ツール/API/SDK |
-| Q4 | 規制議論 | 20 | AI Act/著作権/規制 |
-| Q5 | 日本語ニュース | 40 | 日本語のAI速報 |
+| Q1 | 速報・ニュースアグリゲーター | 100 | @_akhaliq, @rowancheung 等10名 |
+| Q2 | 企業公式（AI大手） | 100 | @AnthropicAI, @OpenAIDevs 等10名 |
+| Q3 | 創業者・CEO | 100 | @sama, @karpathy 等10名 |
+| Q4 | 研究者・教育者 | 100 | @karpathy, @AndrewYNg 等10名 |
 
-#### 実務系（Q6-Q11）
-| ID | 名称 | 件数 | 説明 |
+#### 実務系（Q5-Q11）
+| ID | 名称 | 件数 | 対象 |
 |----|------|------|------|
-| Q6 | 開発OSS | 20 | LangChain/LlamaIndex/Ollama |
-| Q7 | エージェントRAG | 20 | AIエージェント/RAG |
-| Q8 | ビジネス収益 | 20 | 収益化/副業/自動化 |
-| Q9 | セキュリティ | 20 | プロンプトインジェクション/脆弱性 |
-| Q10 | 日本語活用事例 | 40 | 日本語の実務ノウハウ |
-| Q11 | 優先インフルエンサー | 50 | 7名の全投稿 |
+| Q5 | Vibe Coder・ビルダー① | 100 | @mckaywrigley, @IndyDevDan 等10名 |
+| Q6 | Vibe Coder・ビルダー② | 100 | @SullyOmarr, @steventey 等10名 |
+| Q7 | インディーハッカー・起業家 | 100 | @levelsio, @yoheinakajima 等10名 |
+| Q8 | AIツール公式 | 100 | @cursor_ai, @ollama 等10名 |
+| Q9 | プラットフォーム・コミュニティ | 100 | @vercel, @supabase 等10名 |
+| Q10 | ニュースレター・メディア | 100 | @tldrnewsletter, @bensbites 等11名 |
+| Q11 | その他重要アカウント | 50 | @paulg, @heyBarsee 等5名 |
 
 ### Rate Limit対策
 - X API Basic Plan: $100/月、10,000 tweets/月
@@ -174,6 +234,7 @@ npm run ai-news:dry          # テスト（Discord投稿なし）
 ### 出力先
 - **JSON保存**: `data/ai-news/ai-news_YYYY-MM-DD.json`
 - **Discord投稿**: 各Webhookチャンネルへ自動投稿
+- **Notion保存**: 設定済みの場合、自動でNotionデータベースに保存（`--no-notion`でスキップ可）
 
 ### タグ判定ルール
 - `[STAR]`: 再現手順/テンプレ/具体例/数字あり → 有料note候補
@@ -211,7 +272,8 @@ npm run weekly-summary:friday:dry
 2. Claude APIで記事生成（火曜=7000文字、金曜=10000文字）
 3. `output/weekly-summary/` に保存
 4. VIP Discord（DISCORD_WEBHOOK_WEEKLY_SUMMARY）に全文投稿
-5. note.com投稿（金曜日のみ自動、火曜日は手動）
+5. Notionに保存（設定済みの場合、`--no-notion`でスキップ可）
+6. note.com投稿（金曜日のみ自動、火曜日は手動）
 
 ### note自動投稿の仕組み
 - Pythonスクリプト: `scripts/note_draft_poster_selenium.py`
@@ -356,6 +418,13 @@ crontab -e
 ---
 
 ## 変更履歴
+
+### 2025-12-31 v2.1
+- Notion統合機能追加
+  - 日次収集データの自動保存
+  - 週次まとめの自動保存
+  - データベーススキーマ自動セットアップ
+- `--no-notion` オプション追加
 
 ### 2025-12-24 v2.0
 - 週次まとめシステム実装
