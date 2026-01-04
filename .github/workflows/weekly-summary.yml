@@ -1,0 +1,99 @@
+name: Weekly Summary
+
+on:
+  schedule:
+    # 火曜日 日本時間 10:00 (UTC 1:00)
+    - cron: '0 1 * * 2'
+    # 金曜日 日本時間 10:00 (UTC 1:00)
+    - cron: '0 1 * * 5'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Summary mode'
+        required: true
+        default: 'tuesday'
+        type: choice
+        options:
+          - tuesday
+          - friday
+          - friday-note
+
+jobs:
+  weekly-summary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Determine summary mode
+        id: mode
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "mode=${{ github.event.inputs.mode }}" >> $GITHUB_OUTPUT
+          else
+            # cron実行時: 曜日で判定
+            DAY_OF_WEEK=$(date +%u)
+            if [ "$DAY_OF_WEEK" = "2" ]; then
+              echo "mode=tuesday" >> $GITHUB_OUTPUT
+            elif [ "$DAY_OF_WEEK" = "5" ]; then
+              echo "mode=friday" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Download recent ai-news data
+        run: |
+          # 過去のワークフローからデータを取得するか、
+          # リポジトリ内のdataディレクトリを使用
+          mkdir -p data/ai-news
+          echo "Using existing data in repository"
+
+      - name: Run Tuesday Summary (Free)
+        if: steps.mode.outputs.mode == 'tuesday'
+        run: npm run weekly-summary:tuesday
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          DISCORD_WEBHOOK_WEEKLY_SUMMARY: ${{ secrets.DISCORD_WEBHOOK_WEEKLY_SUMMARY }}
+          DISCORD_WEBHOOK_WEEKLY_SUMMARY_2: ${{ secrets.DISCORD_WEBHOOK_WEEKLY_SUMMARY_2 }}
+          NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
+          NOTION_WEEKLY_PARENT_ID: ${{ secrets.NOTION_WEEKLY_PARENT_ID }}
+
+      - name: Run Friday Summary (Paid - Discord only)
+        if: steps.mode.outputs.mode == 'friday'
+        run: npm run weekly-summary:friday
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          DISCORD_WEBHOOK_WEEKLY_SUMMARY: ${{ secrets.DISCORD_WEBHOOK_WEEKLY_SUMMARY }}
+          DISCORD_WEBHOOK_WEEKLY_SUMMARY_2: ${{ secrets.DISCORD_WEBHOOK_WEEKLY_SUMMARY_2 }}
+          NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
+          NOTION_WEEKLY_PARENT_ID: ${{ secrets.NOTION_WEEKLY_PARENT_ID }}
+
+      - name: Run Friday Summary with Note (Paid + note.com)
+        if: steps.mode.outputs.mode == 'friday-note'
+        run: npm run weekly-summary:friday:note
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          DISCORD_WEBHOOK_WEEKLY_SUMMARY: ${{ secrets.DISCORD_WEBHOOK_WEEKLY_SUMMARY }}
+          DISCORD_WEBHOOK_WEEKLY_SUMMARY_2: ${{ secrets.DISCORD_WEBHOOK_WEEKLY_SUMMARY_2 }}
+          NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
+          NOTION_WEEKLY_PARENT_ID: ${{ secrets.NOTION_WEEKLY_PARENT_ID }}
+          NOTE_EMAIL: ${{ secrets.NOTE_EMAIL }}
+          NOTE_PASSWORD: ${{ secrets.NOTE_PASSWORD }}
+
+      - name: Upload summary output
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: weekly-summary-${{ github.run_id }}
+          path: output/weekly-summary/
+          retention-days: 90

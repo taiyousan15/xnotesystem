@@ -1,0 +1,53 @@
+name: Daily AI News Collection
+
+on:
+  schedule:
+    # 日本時間 6:00 (UTC 21:00 前日)
+    - cron: '0 21 * * *'
+  workflow_dispatch:  # 手動実行も可能
+
+jobs:
+  collect-and-post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run AI News Collection
+        run: npm run ai-news
+        env:
+          # X (Twitter) API
+          X_BEARER_TOKEN: ${{ secrets.X_BEARER_TOKEN }}
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_KEY_SECRET: ${{ secrets.X_API_KEY_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
+          # Anthropic
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Discord Webhooks
+          DISCORD_WEBHOOK_RAW: ${{ secrets.DISCORD_WEBHOOK_RAW }}
+          DISCORD_WEBHOOK_NEWS: ${{ secrets.DISCORD_WEBHOOK_NEWS }}
+          DISCORD_WEBHOOK_PRACTICE: ${{ secrets.DISCORD_WEBHOOK_PRACTICE }}
+          DISCORD_WEBHOOK_NOTE_PAID: ${{ secrets.DISCORD_WEBHOOK_NOTE_PAID }}
+          # Notion (optional)
+          NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
+          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+
+      - name: Upload collected data
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-news-data-${{ github.run_id }}
+          path: data/ai-news/
+          retention-days: 30
